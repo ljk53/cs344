@@ -38,7 +38,6 @@ void rgba_to_greyscale(const uchar4* const rgbaImage,
                        unsigned char* const greyImage,
                        int numRows, int numCols)
 {
-  //TODO
   //Fill in the kernel to convert from color to greyscale
   //the mapping from components of a uchar4 to RGBA is:
   // .x -> R ; .y -> G ; .z -> B ; .w -> A
@@ -50,6 +49,15 @@ void rgba_to_greyscale(const uchar4* const rgbaImage,
   //First create a mapping from the 2D block and grid locations
   //to an absolute 2D location in the image, then use that to
   //calculate a 1D offset
+
+  int x = blockDim.x * blockIdx.x + threadIdx.x;
+  int y = blockDim.y * blockIdx.y + threadIdx.y;
+  if (x >= numRows || y >= numCols) {
+    return;
+  }
+  int idx = x * numCols + y;
+  const uchar4& p = rgbaImage[idx];
+  greyImage[idx] = .299f * p.x + .587f * p.y + .114f * p.z;
 }
 
 void your_rgba_to_greyscale(const uchar4 * const h_rgbaImage, uchar4 * const d_rgbaImage,
@@ -57,8 +65,12 @@ void your_rgba_to_greyscale(const uchar4 * const h_rgbaImage, uchar4 * const d_r
 {
   //You must fill in the correct sizes for the blockSize and gridSize
   //currently only one block with one thread is being launched
-  const dim3 blockSize(1, 1, 1);  //TODO
-  const dim3 gridSize( 1, 1, 1);  //TODO
+  const int BLOCK_SIZE_X = 8;
+  const int BLOCK_SIZE_Y = 8;
+  const dim3 blockSize(BLOCK_SIZE_X, BLOCK_SIZE_Y, 1);
+  const dim3 gridSize(
+      (numRows + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X,
+      (numCols + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y, 1);
   rgba_to_greyscale<<<gridSize, blockSize>>>(d_rgbaImage, d_greyImage, numRows, numCols);
   
   cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
