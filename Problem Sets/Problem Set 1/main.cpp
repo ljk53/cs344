@@ -58,14 +58,22 @@ int main(int argc, char **argv) {
   //load the image and give us our input and output pointers
   preProcess(&h_rgbaImage, &h_greyImage, &d_rgbaImage, &d_greyImage, input_file);
 
+  const int M = 10;
+  for (int i = 0; i < M; ++i) {
+    your_rgba_to_greyscale(h_rgbaImage, d_rgbaImage, d_greyImage, numRows(), numCols());
+  }
+
   GpuTimer timer;
   timer.Start();
   //call the students' code
-  your_rgba_to_greyscale(h_rgbaImage, d_rgbaImage, d_greyImage, numRows(), numCols());
+  const int N = 1000;
+  for (int i = 0; i < N; ++i) {
+    your_rgba_to_greyscale(h_rgbaImage, d_rgbaImage, d_greyImage, numRows(), numCols());
+  }
   timer.Stop();
   cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
 
-  int err = printf("Your code ran in: %f msecs.\n", timer.Elapsed());
+  int err = printf("Your code ran in: %f msecs.\n", timer.Elapsed() / N);
 
   if (err < 0) {
     //Couldn't print! Probably the student closed stdout - bad news

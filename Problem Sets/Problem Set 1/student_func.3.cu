@@ -15,7 +15,7 @@
 
 //To convert an image from color to grayscale one simple method is to
 //set the intensity to the average of the RGB channels.  But we will
-//use a more sophisticated method that takes into account how the eye 
+//use a more sophisticated method that takes into account how the eye
 //perceives color and weights the channels unequally.
 
 //The eye responds most strongly to green followed by red and then blue.
@@ -24,7 +24,7 @@
 
 //I = .299f * R + .587f * G + .114f * B
 
-//Notice the trailing f's on the numbers which indicate that they are 
+//Notice the trailing f's on the numbers which indicate that they are
 //single precision floating point constants and not double precision
 //constants.
 
@@ -49,15 +49,10 @@ void rgba_to_greyscale(const uchar4* const rgbaImage,
   //First create a mapping from the 2D block and grid locations
   //to an absolute 2D location in the image, then use that to
   //calculate a 1D offset
-
-  int x = blockDim.x * blockIdx.x + threadIdx.x;
-  int y = blockDim.y * blockIdx.y + threadIdx.y;
-  if (x >= numRows || y >= numCols) {
-    return;
+  for (int i = blockDim.x * blockIdx.x + threadIdx.x; i < numCols * numRows; i += gridDim.x * blockDim.x) {
+    const uchar4& p = rgbaImage[i];
+    greyImage[i] = .299f * p.x + .587f * p.y + .114f * p.z;
   }
-  int idx = x * numCols + y;
-  const uchar4& p = rgbaImage[idx];
-  greyImage[idx] = .299f * p.x + .587f * p.y + .114f * p.z;
 }
 
 void your_rgba_to_greyscale(const uchar4 * const h_rgbaImage, uchar4 * const d_rgbaImage,
@@ -65,14 +60,11 @@ void your_rgba_to_greyscale(const uchar4 * const h_rgbaImage, uchar4 * const d_r
 {
   //You must fill in the correct sizes for the blockSize and gridSize
   //currently only one block with one thread is being launched
-  const int BLOCK_SIZE_X = 8;
-  const int BLOCK_SIZE_Y = 8;
-  const dim3 blockSize(BLOCK_SIZE_X, BLOCK_SIZE_Y, 1);
-  const dim3 gridSize(
-      (numRows + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X,
-      (numCols + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y, 1);
+  const int THREADS = 128;
+  const dim3 blockSize(THREADS, 1, 1);
+  const dim3 gridSize((numRows * numCols + THREADS - 1) / THREADS, 1, 1);
   rgba_to_greyscale<<<gridSize, blockSize>>>(d_rgbaImage, d_greyImage, numRows, numCols);
-  
+
   cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
 
 }
